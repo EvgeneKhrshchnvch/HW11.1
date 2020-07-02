@@ -6,9 +6,13 @@ import sockjs from 'sockjs'
 import { renderToStaticNodeStream } from 'react-dom/server'
 import React from 'react'
 
+import axios from 'axios'
+
 import cookieParser from 'cookie-parser'
 import config from './config'
 import Html from '../client/html'
+
+const { writeFile, readFile, unlink } = require("fs").promises
 
 const Root = () => ''
 
@@ -28,6 +32,12 @@ try {
 
 let connections = []
 
+const setHeaders = (req, res, next) => {
+  res.set('x-skillcrucial-user', '385666b1-bff5-11e9-95ba-1bf845c18f8d')
+  res.set('Access-Control-Expose-Headers', 'X-SKILLCRUCIAL-USER')
+  next()
+}
+
 const port = process.env.PORT || 8090
 const server = express()
 
@@ -36,10 +46,84 @@ const middleware = [
   express.static(path.resolve(__dirname, '../dist/assets')),
   bodyParser.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }),
   bodyParser.json({ limit: '50mb', extended: true }),
+  setHeaders,
   cookieParser()
 ]
 
+const readWrite = () => {
+  return readFile(`${__dirname}/test.json`, { encoding: "utf8" })
+    .then(it => JSON.parse(it))
+    .catch(async () => {
+      const users = await axios('https://jsonplaceholder.typicode.com/users').then(link => link.data)
+      writeFile(`${__dirname}/test.json`, JSON.stringify(users), { encoding: "utf8" })
+      return users
+    })
+}
+
+const writeFileForUsers = (user) => {
+  return writeFile(`${__dirname}/test.json`, JSON.stringify(user), { encoding: "utf8" })
+}
+
 middleware.forEach((it) => server.use(it))
+
+server.get('/api/v1/users', async (req, res) => {
+  const text = await readWrite()
+  res.json( text )
+})
+
+server.post('/api/v1/users', async (req, res) => {
+  const newUser = req.body
+  const users = await readWrite()
+  // const lastUserId = users[users.length - 1].id + 1
+  const sortUsers = users.sort(users.id)
+  const lastUserId = sortUsers[sortUsers.length - 1].id + 1
+  const newUsers = [...users, {...newUser, id: lastUserId}]
+
+  writeFileForUsers(newUsers)
+
+  res.json({status: 'success', id: lastUserId})
+})
+
+// patch /api/v1/users/:userId - дополняет юзера в users.json с id 
+// равным userId и возвращает { status: 'success', id: userId }
+
+/*
+  userId: 12
+
+  req.body = { "email": "pepe@frog.com" }
+
+  [1,2,3,4]
+*/
+
+server.patch('/api/v1/users/:userId', async (req, res) => {
+  const { userId } = req.params
+  const users = await readWrite()
+  const newUser = users.find(item => item.id === +userId)
+  const newFields = {...newUser, ...req.body}
+  const list = users.reduce((acc, rec) => {
+    return rec.id === +userId ? [...acc, newFields] : [...acc, rec]
+  }, [])
+  writeFileForUsers(list)
+  res.json({ status: 'success', id: userId })
+})
+
+/*
+  delete /api/v1/users/:userId - удаляет юзера в users.json с id равным userId и 
+  возвращает { status: 'success', id: userId }
+*/
+
+server.delete('/api/v1/users/:userId', async (req, res) => {
+  const { userId } = req.params
+  const usersArray = await readWrite()
+  const filterUsers = usersArray.filter(it => it.id !== +userId)
+  writeFileForUsers(filterUsers)
+  res.json({ status: 'success', id: userId })
+})
+
+server.delete('/api/v1/users/', (req, res) => {
+  unlink(`${__dirname}/test.json`)
+  res.json({ status: 'delete' })
+})
 
 server.use('/api/', (req, res) => {
   res.status(404)
