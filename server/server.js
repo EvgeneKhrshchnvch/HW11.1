@@ -33,7 +33,7 @@ try {
 let connections = []
 
 const setHeaders = (req, res, next) => {
-  res.set('x-skillcrucial-user', '385666b1-bff5-11e9-95ba-1bf845c18f8d')
+  res.set('x-skillcrucial-user', 'eb7c973a-dc3a-4105-b3df-6b4e4721f973')
   res.set('Access-Control-Expose-Headers', 'X-SKILLCRUCIAL-USER')
   next()
 }
@@ -84,16 +84,6 @@ server.post('/api/v1/users', async (req, res) => {
   res.json({status: 'success', id: lastUserId})
 })
 
-// patch /api/v1/users/:userId - дополняет юзера в users.json с id 
-// равным userId и возвращает { status: 'success', id: userId }
-
-/*
-  userId: 12
-
-  req.body = { "email": "pepe@frog.com" }
-
-  [1,2,3,4]
-*/
 
 server.patch('/api/v1/users/:userId', async (req, res) => {
   const { userId } = req.params
@@ -107,10 +97,7 @@ server.patch('/api/v1/users/:userId', async (req, res) => {
   res.json({ status: 'success', id: userId })
 })
 
-/*
-  delete /api/v1/users/:userId - удаляет юзера в users.json с id равным userId и 
-  возвращает { status: 'success', id: userId }
-*/
+
 
 server.delete('/api/v1/users/:userId', async (req, res) => {
   const { userId } = req.params
