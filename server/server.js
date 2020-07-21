@@ -107,10 +107,12 @@ server.delete('/api/v1/users/:userId', async (req, res) => {
   res.json({ status: 'success', id: userId })
 })
 
-server.delete('/api/v1/users/', (req, res) => {
+server.delete('/api/v1/users/', async (req, res) => {
   unlink(`${__dirname}/test.json`)
-  res.json({ status: 'delete' })
+  res.json()
 })
+
+
 
 server.use('/api/', (req, res) => {
   res.status(404)
